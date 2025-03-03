@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MiWebAppNet8")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+99a60009bdcc698e38f6942243270e59fc7f1ffa")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0c5d7a7f6b06cf2b83a0c80d2ea4fa74436642ea")]
 [assembly: System.Reflection.AssemblyProductAttribute("MiWebAppNet8")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MiWebAppNet8")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
