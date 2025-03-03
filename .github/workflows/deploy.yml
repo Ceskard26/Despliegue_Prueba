@@ -1,9 +1,9 @@
-name: Deploy to AWS EC2 using CodeDeploy a
+name: Deploy to AWS EC2 using CodeDeploy with SonarCloud
 
 on:
   push:
     branches:
-      - main
+      - main  # Asegúrate de que sea la rama principal de tu repo
 
 jobs:
   build_and_analyze:
@@ -11,7 +11,9 @@ jobs:
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Necesario para un mejor análisis en SonarCloud
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
@@ -25,35 +27,27 @@ jobs:
       with:
         dotnet-version: '8.0'
 
-    - name: Cache SonarQube Cloud scanner
-      id: cache-sonar-scanner
-      uses: actions/cache@v4
-      with:
-        path: .sonar/scanner
-        key: ${{ runner.os }}-sonar-scanner
-        restore-keys: ${{ runner.os }}-sonar-scanner
-
-    - name: Install SonarQube Cloud scanner
-      if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+    - name: Install SonarCloud Scanner
       run: |
-        mkdir -p .sonar/scanner
-        dotnet tool update --global dotnet-sonarscanner
+        dotnet tool install --global dotnet-sonarscanner
+        echo "DOTNET_ROOT=$(dirname $(which dotnet))" >> $GITHUB_ENV
+        echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
     - name: Run SonarCloud Analysis
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
-        dotnet-sonarscanner begin /k:"Ceskard26_Despliegue_Prueba" /o:"cesar-carrasco" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
+        dotnet sonarscanner begin /k:"Ceskard26_Despliegue_Prueba" /o:"cesar-carrasco" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
         dotnet build
-        dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+        dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
   deploy:
-    needs: build_and_analyze
+    needs: build_and_analyze  # Asegura que primero pase la validación en SonarCloud
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
