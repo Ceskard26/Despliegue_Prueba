@@ -1,19 +1,19 @@
-name: Deploy to AWS CodeDeploy
+name: Deploy to AWS EC2 using CodeDeploy
 
 on:
   push:
     branches:
-      - main
+      - main  # Asegura que se ejecute en la rama correcta
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
       with:
-        fetch-depth: 0  # Importante para la relevancia del análisis en SonarCloud
+        fetch-depth: 0  # Importante para SonarCloud
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
@@ -62,22 +62,24 @@ jobs:
           echo "✅ SonarCloud Quality Gate passed!"
         fi
 
-    # 🔹 Empaquetar y Subir a AWS S3 🔹
-    - name: Create Deployment Package
+    # 🔹 Si pasa SonarCloud, se empaqueta y sube a AWS S3 🔹
+    - name: Build .NET 8 Project
       run: |
-        mkdir -p app
-        cp -r bin/Release/net8.0/publish/* app
-        zip -r app.zip app
+        dotnet publish -c Release -o app
+
+    - name: Create Deployment Package
+      run: zip -r app.zip app
 
     - name: Upload Artifact to AWS S3
-      run: aws s3 cp ./app.zip s3://${{ secrets.S3_BUCKET_NAME }}/app.zip
+      run: |
+        aws s3 cp app.zip s3://${{ secrets.S3_BUCKET_NAME }}/app.zip
 
     # 🔹 Desplegar en AWS CodeDeploy 🔹
     - name: Deploy to AWS CodeDeploy
       run: |
         aws deploy create-deployment \
           --application-name Deploy-NET8-EC2 \
-          --deployment-group-name MiDeploymentGroup \
+          --deployment-group-name Deploy-Group-EC2 \
           --s3-location bucket=${{ secrets.S3_BUCKET_NAME }},key=app.zip,bundleType=zip \
           --region ${{ secrets.AWS_REGION }}
 
