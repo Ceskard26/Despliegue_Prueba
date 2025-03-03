@@ -1,22 +1,24 @@
-name: Deploy to AWS EC2 using CodeDeploy
+name: Deploy to AWS CodeDeploy
 
 on:
   push:
     branches:
-      - main  # Cambia esto si tu rama principal tiene otro nombre
+      - main
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Importante para la relevancia del análisis en SonarCloud
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
 
@@ -25,27 +27,57 @@ jobs:
       with:
         dotnet-version: '8.0'
 
-    - name: Build .NET 8 Project
-      run: |
-        dotnet restore
-        dotnet publish -c Release -o app
+    - name: Restore Dependencies
+      run: dotnet restore
 
+    # 🔹 Integración con SonarCloud 🔹
+    - name: Cache SonarCloud Scanner
+      uses: actions/cache@v4
+      with:
+        path: ./.sonar/scanner
+        key: ${{ runner.os }}-sonar-scanner
+        restore-keys: ${{ runner.os }}-sonar-scanner
+
+    - name: Install SonarCloud Scanner (if not cached)
+      run: |
+        mkdir -p ./.sonar/scanner
+        dotnet tool update --global dotnet-sonarscanner
+
+    - name: SonarCloud Analysis
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      run: |
+        dotnet-sonarscanner begin /k:"Ceskard26_Despliegue_Prueba" /o:"cesar-carrasco" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
+        dotnet build --configuration Release
+        dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+
+    # 🔹 Validación de SonarCloud 🔹
+    - name: Check SonarCloud Quality Gate
+      run: |
+        curl -u ${{ secrets.SONAR_TOKEN }} "https://sonarcloud.io/api/qualitygates/project_status?projectKey=Ceskard26_Despliegue_Prueba" | jq . > sonar_result.json
+        if grep -q '"status":"ERROR"' sonar_result.json; then
+          echo "❌ SonarCloud Quality Gate failed!"
+          exit 1
+        else
+          echo "✅ SonarCloud Quality Gate passed!"
+        fi
+
+    # 🔹 Empaquetar y Subir a AWS S3 🔹
     - name: Create Deployment Package
       run: |
+        mkdir -p app
+        cp -r bin/Release/net8.0/publish/* app
         zip -r app.zip app
 
     - name: Upload Artifact to AWS S3
-      run: |
-        aws s3 cp app.zip s3://${{ secrets.S3_BUCKET_NAME }}/app.zip
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: ${{ secrets.AWS_REGION }}
+      run: aws s3 cp ./app.zip s3://${{ secrets.S3_BUCKET_NAME }}/app.zip
 
+    # 🔹 Desplegar en AWS CodeDeploy 🔹
     - name: Deploy to AWS CodeDeploy
       run: |
         aws deploy create-deployment \
           --application-name Deploy-NET8-EC2 \
-          --deployment-group-name Deploy-Group-EC2 \
+          --deployment-group-name MiDeploymentGroup \
           --s3-location bucket=${{ secrets.S3_BUCKET_NAME }},key=app.zip,bundleType=zip \
           --region ${{ secrets.AWS_REGION }}
+
