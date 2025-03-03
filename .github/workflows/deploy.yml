@@ -3,43 +3,49 @@ name: Deploy to AWS EC2 using CodeDeploy
 on:
   push:
     branches:
-      - main  # Se ejecutará cuando hagas push a la rama main
+      - main  # Cambia esto si tu rama principal tiene otro nombre
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+    - name: Checkout Repository
+      uses: actions/checkout@v3
 
-      - name: Setup .NET 8
-        uses: actions/setup-dotnet@v3
-        with:
-          dotnet-version: '8.0'
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Build .NET 8 Project
-        run: |
-          dotnet restore
-          dotnet build --configuration Release
-          dotnet publish -c Release -o app
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0'
 
-      - name: Upload Artifact to AWS S3
-        run: |
-          zip -r app.zip app
-          aws s3 cp app.zip s3://${{ secrets.S3_BUCKET_NAME }}/app.zip
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+    - name: Build .NET 8 Project
+      run: |
+        dotnet restore
+        dotnet publish -c Release -o app
 
-      - name: Deploy to AWS CodeDeploy
-        run: |
-          aws deploy create-deployment \
-            --application-name Deploy-NET8-EC2 \
-            --deployment-group-name Deploy-Group-EC2 \
-            --s3-location bucket=${{ secrets.S3_BUCKET_NAME }},bundleType=zip,key=app.zip
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+    - name: Create Deployment Package
+      run: |
+        zip -r app.zip app
+
+    - name: Upload Artifact to AWS S3
+      run: |
+        aws s3 cp app.zip s3://${{ secrets.S3_BUCKET_NAME }}/app.zip
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+
+    - name: Deploy to AWS CodeDeploy
+      run: |
+        aws deploy create-deployment \
+          --application-name MiAplicacionCodeDeploy \
+          --deployment-group-name MiDeploymentGroup \
+          --s3-location bucket=${{ secrets.S3_BUCKET_NAME }},key=app.zip,bundleType=zip \
+          --region ${{ secrets.AWS_REGION }}
