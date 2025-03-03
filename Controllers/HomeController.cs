@@ -1,8 +1,5 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using MiWebAppNet8.Models;
-
-namespace MiWebAppNet8.Controllers;
+using Microsoft.Extensions.Logging;  // <-- Asegúrate de que esta línea esté incluida
 
 public class HomeController : Controller
 {
@@ -16,16 +13,5 @@ public class HomeController : Controller
     public IActionResult Index()
     {
         return View();
-    }
-
-    public IActionResult Privacy()
-    {
-        return View();
-    }
-
-    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-    public IActionResult Error()
-    {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }
