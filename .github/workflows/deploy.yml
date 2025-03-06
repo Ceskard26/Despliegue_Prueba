@@ -3,7 +3,7 @@ name: Deploy to AWS EC2 using CodeDeploy with SonarCloud
 on:
   push:
     branches:
-      - main  # Asegúrate de que sea la rama principal de tu repo
+      - main  # Asegúrate de que sea la rama principal de tu repo.
 
 jobs:
   build_and_analyze:
