@@ -1,4 +1,4 @@
-name: Deploy to AWS EC2 using CodeDeploy with SonarCloud
+name: Deploy to AWS EC2 using CodeDeploy with SonarCloud, demostración
 
 on:
   push:
