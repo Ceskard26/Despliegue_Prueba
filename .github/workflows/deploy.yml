@@ -3,7 +3,7 @@ name: Deploy to AWS EC2 using CodeDeploy with SonarCloud
 on:
   push:
     branches:
-      - main  # Asegúrate de que sea la rama principal de tu repo.
+      - main  
 
 jobs:
   build_and_analyze:
@@ -13,7 +13,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Necesario para un mejor análisis en SonarCloud
+        fetch-depth: 0  
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
@@ -42,7 +42,7 @@ jobs:
         dotnet sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
   deploy:
-    needs: build_and_analyze  # Asegura que primero pase la validación en SonarCloud
+    needs: build_and_analyze  
     runs-on: ubuntu-latest
 
     steps:
